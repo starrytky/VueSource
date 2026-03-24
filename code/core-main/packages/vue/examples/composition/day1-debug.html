@@ -1,0 +1,16 @@
+<div id="app"></div>
+<script src="../../dist/vue.global.js"></script>
+<script>
+  const { createApp, h, ref } = Vue
+
+  const App = {
+    setup() {
+      const count = ref(0)
+      window.bump = () => count.value++
+      return () =>
+        h('button', { onClick: () => count.value++ }, `count: ${count.value}`)
+    },
+  }
+  debugger;
+  createApp(App).mount('#app')
+</script>
