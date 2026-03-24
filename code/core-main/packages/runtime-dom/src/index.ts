@@ -118,8 +118,11 @@ export const createApp = ((...args) => {
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
+      // 原因：in-DOM 模板中可能会执行 JS 表达式。
       // The user must make sure the in-DOM template is trusted. If it's
+      // 用户必须确保这个 in-DOM 模板是可信的。如果它是由服务端渲染出来的，
       // rendered by the server, the template should not contain any user data.
+      // 那么模板中不应包含任何用户数据。
       component.template = container.innerHTML
       // 2.x compat check
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {

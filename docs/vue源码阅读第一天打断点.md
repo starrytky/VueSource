@@ -1,5 +1,5 @@
 # Vue 源码阅读第一天打断点
-更新时间：2026-03-24
+更新时间：2026-03-25
 
 ## 1. 第一天的目标
 
@@ -98,6 +98,110 @@ pnpm run serve
 
 - 通过 `createRenderer(rendererOptions)` 创建渲染器
 - 对 `mount` 做 DOM 容器规范化和清空处理
+
+### 5.2 关于 `runtime-dom` 里重写 `mount` 的补充问答
+
+这里的“重写 `mount`”不是把真正的挂载逻辑推翻重写，而是在调用原始 `mount` 前后，补了一层 DOM 平台相关处理。大致流程是：
+
+1. 保存原始 `mount`
+2. 规范化挂载容器
+3. 必要时从容器 `innerHTML` 中提取模板
+4. 挂载前清空容器内容
+5. 调用原始 `mount`
+6. 挂载后移除 `v-cloak` 并打上 `data-v-app` 标记
+
+也就是说，真正把组件渲染成 DOM 的核心工作，依然是原始 `mount` 完成的；`runtime-dom` 这里只是补 DOM 场景需要的适配层。
+
+### 5.3 “对 `mount` 做 DOM 容器规范化和清空处理” 这一步在哪里？
+
+这一步就在 `packages/runtime-dom/src/index.ts` 里重写后的 `app.mount` 中完成：
+
+- `const container = normalizeContainer(containerOrSelector)`
+- `if (container.nodeType === 1) { container.textContent = '' }`
+
+其中：
+
+- `normalizeContainer(...)` 负责把传入的选择器字符串、`Element`、`ShadowRoot` 统一成真正可挂载的容器
+- `container.textContent = ''` 负责在挂载前清空普通元素容器里的旧内容
+
+而真正执行挂载的是后面这句：
+
+```ts
+const proxy = mount(container, false, resolveRootNamespace(container))
+```
+
+可以把它理解成：先做 DOM 前置处理，再把处理好的容器交给运行时核心去挂载。
+
+### 5.4 `__DEV__` 对应的是什么？
+
+`__DEV__` 是一个“编译期注入的全局布尔常量”，表示当前是不是开发环境。它不是普通运行时变量，而是在构建时被直接替换掉的标记。
+
+你可以简单把它理解成：
+
+- `__DEV__ === true`：开发环境，保留告警、校验、调试辅助逻辑
+- `__DEV__ === false`：生产环境，这些开发辅助分支会被裁掉
+
+所以像下面这种代码：
+
+```ts
+if (__DEV__) {
+  injectNativeTagCheck(app)
+  injectCompilerOptionsCheck(app)
+}
+```
+
+意思就是：这些逻辑只在开发环境执行，生产环境不会保留。
+
+### 5.5 `container.nodeType === 1` 意味着什么？
+
+这表示 `container` 是一个“元素节点”，也就是 DOM 里的 `Element`，例如 `div`、`span`、`svg`。
+
+常见的 `nodeType` 可以先记这几个：
+
+- `1`：元素节点 `Element`
+- `3`：文本节点 `Text`
+- `8`：注释节点 `Comment`
+- `9`：文档节点 `Document`
+- `11`：文档片段 `DocumentFragment`，`ShadowRoot` 也属于这一类
+
+所以这段代码：
+
+```ts
+if (container.nodeType === 1) {
+  container.textContent = ''
+}
+```
+
+表达的就是：只有挂载目标是普通元素节点时，才清空它的内容；如果传入的是 `ShadowRoot`，它的 `nodeType` 是 `11`，这里就不会进入这个分支。
+
+### 5.6 挂载后为什么要移除 `v-cloak` 并设置 `data-v-app`？
+
+这段代码：
+
+```ts
+if (container instanceof Element) {
+  container.removeAttribute('v-cloak')
+  container.setAttribute('data-v-app', '')
+}
+```
+
+是挂载完成后的收尾处理，只在容器是普通 DOM 元素时执行。
+
+`removeAttribute('v-cloak')` 的作用是移除挂载前用于隐藏模板内容的 `v-cloak`。常见用法是：
+
+```html
+<div id="app" v-cloak>{{ msg }}</div>
+```
+
+```css
+[v-cloak] { display: none; }
+```
+
+当 Vue 挂载完成后，就应该把它移除，让编译后的内容正常显示。
+
+`setAttribute('data-v-app', '')` 的作用是给根容器打一个标记，表示“这个节点已经被一个 Vue 应用接管了”。这个标记主要方便调试、识别和框架层面的挂载痕迹管理。
+
+外层要先判断 `container instanceof Element`，是因为 `removeAttribute` 和 `setAttribute` 这些 API 只适用于元素节点；如果容器是 `ShadowRoot`，就不能这样调用。
 
 ## 6. 第一天第二组断点
 
