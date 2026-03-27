@@ -426,5 +426,287 @@ bump()
 
 从 `createApp(App).mount('#app')` 出发，把“组件如何变成真实 DOM”这条路径亲手断通一次。
 
-先不要追求细节全懂，也不要急着研究所有高级特性。  
+先不要追求细节全懂，也不要急着研究所有高级特性。 
 只要把挂载链路和一次更新链路走通，第二天再去看响应式、编译器、diff 细节，理解成本会明显下降。
+
+## 17. 补充问答
+
+这一节补充第一天打断点时最容易卡住的几个问题。
+
+### 17.1 为什么 `ensureRenderer().createApp(...args)` 会跳到 `createAppAPI(...)` 里？
+
+因为 `runtime-dom` 里的 `createApp` 只是平台层入口，真正的 `createApp` 是 `runtime-core` 里通过 `createAppAPI(render, hydrate)` 生成出来的。
+
+关键链路是：
+
+```ts
+// packages/runtime-dom/src/index.ts
+const app = ensureRenderer().createApp(...args)
+```
+
+```ts
+// packages/runtime-core/src/renderer.ts
+return {
+  render,
+  hydrate,
+  createApp: createAppAPI(render, hydrate),
+}
+```
+
+```ts
+// packages/runtime-core/src/apiCreateApp.ts
+export function createAppAPI(render, hydrate) {
+  return function createApp(rootComponent, rootProps = null) {
+    ...
+  }
+}
+```
+
+所以 `ensureRenderer().createApp(...args)` 本质上调用的是 `createAppAPI(render, hydrate)` 返回出来的那个内部 `createApp` 闭包。
+
+### 17.2 `createAppAPI` 的两个入参分别是什么？
+
+`createAppAPI` 的签名是：
+
+```ts
+createAppAPI(
+  render: RootRenderFunction<HostElement>,
+  hydrate?: RootHydrateFunction
+)
+```
+
+- `render`
+  普通渲染函数。负责把根组件对应的 vnode 挂到容器上，或在更新时继续走 patch。
+
+- `hydrate`
+  SSR 激活函数。服务端已经输出 HTML 时，客户端不是重新创建 DOM，而是把已有 DOM 和 vnode 对应起来。
+
+在 `app.mount()` 里会根据场景选择调用谁：
+
+```ts
+if (isHydrate && hydrate) {
+  hydrate(vnode, rootContainer)
+} else {
+  render(vnode, rootContainer, namespace)
+}
+```
+
+可以先简单记成：
+
+- `render` = 普通客户端挂载 / 更新
+- `hydrate` = SSR 场景下的激活
+
+### 17.3 `installAppCompatProperties(app, context, render)` 是干什么的？
+
+这段逻辑只在 `__COMPAT__` 为真时才会执行。
+
+```ts
+if (__COMPAT__) {
+  installAppCompatProperties(app, context, render)
+}
+```
+
+它的作用不是 Vue 3 正常主流程必须要做的事，而是给“Vue 2 兼容构建”补一层兼容能力，让老项目迁移时还能跑。
+
+它主要做几件事：
+
+- 给 `app` 补 Vue 2 风格的兼容 API
+  比如 `filter`、`set`、`delete`、`observable`、`extend`
+- 模拟 Vue 2 风格的挂载方式
+  比如先创建实例，再 `$mount()`
+- 把全局单例 Vue 上的配置、组件、指令同步到当前 app
+- 在开发环境下输出迁移警告
+
+所以可以简单理解成：
+
+- 普通模式 = 纯 Vue 3
+- compat 模式 = Vue 3 + 一层 Vue 2 兼容适配器
+
+### 17.4 什么是 compat 模式？
+
+compat 模式就是 Vue 3 提供的“Vue 2 兼容运行模式”。
+
+它的目标不是长期保留旧写法，而是帮助老项目从 Vue 2 逐步迁移到 Vue 3。也就是说：
+
+- 先尽量让旧代码还能运行
+- 再通过警告一点点改掉过时写法
+- 最终回到纯 Vue 3
+
+你在源码里看到这些内容，基本都属于 compat 层：
+
+- `__COMPAT__`
+- `convertLegacyComponent(...)`
+- `convertLegacyVModelProps(...)`
+- `defineLegacyVNodeProperties(...)`
+- `installAppCompatProperties(...)`
+
+新项目通常不需要依赖 compat 模式。
+
+### 17.5 vnode 里这几个字段分别代表什么？
+
+先只记最常用的 6 个：
+
+- `type`
+  这个 vnode 是什么。可能是原生标签名，也可能是组件对象，或者 `Text`、`Comment`、`Fragment` 这类内置类型。
+
+- `props`
+  传给这个 vnode 的参数。对元素来说是 `class`、`style`、事件等；对组件来说是组件 props。
+
+- `children`
+  这个 vnode 的子内容。可能是文本、子 vnode 数组，或者 slots 对象。
+
+- `shapeFlag`
+  一个“位标记”，表示 vnode 的类别和 children 的类别。运行时会靠它快速判断分支。
+
+- `el`
+  这个 vnode 最终对应的真实宿主节点。对 `runtime-dom` 来说通常就是真实 DOM 节点。
+
+- `component`
+  如果这个 vnode 是组件 vnode，这里会指向对应的组件实例 `ComponentInternalInstance`；元素 vnode 通常没有这个值。
+
+可以这样记：
+
+- `type`：我是谁
+- `props`：我身上的参数
+- `children`：我里面有什么
+- `shapeFlag`：我属于哪一类
+- `el`：我最后落到了哪个真实节点
+- `component`：如果我是组件，我对应哪个组件实例
+
+### 17.6 `shapeFlag` 是什么？
+
+`shapeFlag` 是一个位运算标记，用来快速表达 vnode 的“形状”。
+
+比如：
+
+- 是不是元素
+- 是不是组件
+- children 是文本、数组，还是 slots
+
+常见值在 `packages/shared/src/shapeFlags.ts` 里：
+
+```ts
+export enum ShapeFlags {
+  ELEMENT = 1,
+  FUNCTIONAL_COMPONENT = 1 << 1,
+  STATEFUL_COMPONENT = 1 << 2,
+  TEXT_CHILDREN = 1 << 3,
+  ARRAY_CHILDREN = 1 << 4,
+  SLOTS_CHILDREN = 1 << 5,
+  ...
+}
+```
+
+例如：
+
+- `h('div', 'hi')` 大致会带上 `ELEMENT | TEXT_CHILDREN`
+- `h('div', [child1, child2])` 大致会带上 `ELEMENT | ARRAY_CHILDREN`
+- `h(App)` 大致会带上 `STATEFUL_COMPONENT`
+
+### 17.7 `renderer.render` 这段入口代码在做什么？
+
+核心逻辑可以概括成三件事：
+
+1. 如果传入 `vnode == null`
+   表示卸载当前容器中的旧树
+2. 如果传入的是新 vnode
+   就调用 `patch(oldVNode, newVNode, ...)`
+   让 patch 统一处理首次挂载和后续更新
+3. 把本次渲染后的根 vnode 缓存到 `container._vnode`
+   下次再 render 时，它就会成为旧树
+
+代码大意是：
+
+```ts
+const render = (vnode, container, namespace) => {
+  if (vnode == null) {
+    unmount(container._vnode, ...)
+  } else {
+    patch(container._vnode || null, vnode, container, ...)
+  }
+  container._vnode = vnode
+  flushPreFlushCbs()
+  flushPostFlushCbs()
+}
+```
+
+可以把 `render` 理解成：
+
+- 根入口
+- 负责把“旧树 vs 新树”交给 `patch`
+- 负责在一次渲染结束后统一 flush 调度队列
+
+### 17.8 `mountComponent` 这段在干什么？
+
+第一次进入组件 vnode 分支时，`patch -> processComponent -> mountComponent`，这个函数的任务就是把“组件 vnode”真正变成“组件实例 + 子树渲染”。
+
+它大致做这些事：
+
+1. 创建组件实例，并挂到 `initialVNode.component`
+2. 如果是 `KeepAlive`，注入 renderer internals
+3. 调用 `setupComponent(instance, false, optimized)`
+   解析 props、slots，执行 `setup()`，为 render 做准备
+4. 如果组件依赖异步 `setup()`，并且处在 `Suspense` 环境里
+   就先注册依赖，必要时放一个注释节点占位
+5. 否则直接执行 `setupRenderEffect(...)`
+   正式进入组件的首次渲染
+
+所以 `mountComponent` 不是直接创建 DOM，它是在准备“组件实例”和“组件子树”。
+
+### 17.9 什么是 HMR？
+
+HMR 是 `Hot Module Replacement`，中文一般叫“模块热替换”。
+
+意思是：开发时你改了代码，不整页刷新，而是只替换改动过的模块。
+
+在 Vue 开发里，它通常表现为：
+
+- 修改组件文件
+- 构建工具检测到变化
+- 只替换这个组件模块
+- 页面尽量不刷新
+- 有时组件状态还能保留
+
+源码里像这些逻辑都和 HMR 有关：
+
+- `registerHMR(instance)`
+- `isHmrUpdating`
+- `context.reload`
+
+例如：
+
+```ts
+if (__DEV__ && instance.type.__hmrId) {
+  registerHMR(instance)
+}
+```
+
+意思就是：开发环境下，如果这个组件支持热更新，就把它登记到 HMR 系统里。
+
+### 17.10 什么是 Suspense 环境？
+
+Suspense 环境指的是：当前组件处在 `<Suspense>` 组件管理之下。
+
+源码里通常通过 `parentSuspense` 判断：
+
+- 有值：说明当前组件在某个 `Suspense` 边界里面
+- `null`：说明当前组件不在 Suspense 环境里
+
+它主要用于处理异步组件或异步 `setup()`：
+
+```ts
+async setup() {
+  const data = await fetchSomething()
+  return { data }
+}
+```
+
+如果组件有异步依赖，外层又有 `Suspense`，Vue 就不会立刻完成正式渲染，而是：
+
+- 先把这个异步组件注册给 `parentSuspense`
+- 必要时先渲染 fallback 或占位内容
+- 等异步依赖完成后，再继续真正渲染
+
+所以“Suspense 环境”本质上就是：
+
+当前组件受某个 `<Suspense>` 边界统一协调。
