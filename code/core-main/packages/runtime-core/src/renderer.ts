@@ -152,7 +152,7 @@ export interface RendererNode {
   [key: string | symbol]: any
 }
 
-export interface RendererElement extends RendererNode {}
+export interface RendererElement extends RendererNode { }
 
 // An object exposing the internals of a renderer, passed to tree-shakeable
 // features so that they can be decoupled from this file. Keys are shortened
@@ -288,12 +288,12 @@ export const queuePostRenderEffect: (
   fn: SchedulerJobs,
   suspense: SuspenseBoundary | null,
 ) => void = __FEATURE_SUSPENSE__
-  ? __TEST__
-    ? // vitest can't seem to handle eager circular dependency
+    ? __TEST__
+      ? // vitest can't seem to handle eager circular dependency
       (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
         queueEffectWithSuspense(fn, suspense)
-    : queueEffectWithSuspense
-  : queuePostFlushCb
+      : queueEffectWithSuspense
+    : queuePostFlushCb
 
 /**
  * The createRenderer function accepts two generic arguments:
@@ -382,6 +382,7 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren,
   ) => {
+    debugger;
     if (n1 === n2) {
       return
     }
@@ -452,7 +453,7 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
-          ;(type as typeof TeleportImpl).process(
+          ; (type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
             n2 as TeleportVNode,
             container,
@@ -465,7 +466,7 @@ function baseCreateRenderer(
             internals,
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          ;(type as typeof SuspenseImpl).process(
+          ; (type as typeof SuspenseImpl).process(
             n1,
             n2,
             container,
@@ -555,13 +556,13 @@ function baseCreateRenderer(
       const anchor = hostNextSibling(n1.anchor!)
       // remove existing
       removeStaticNode(n1)
-      // insert new
-      ;[n2.el, n2.anchor] = hostInsertStaticContent!(
-        n2.children as string,
-        container,
-        anchor,
-        namespace,
-      )
+        // insert new
+        ;[n2.el, n2.anchor] = hostInsertStaticContent!(
+          n2.children as string,
+          container,
+          anchor,
+          namespace,
+        )
     } else {
       n2.el = n1.el
       n2.anchor = n1.anchor
@@ -970,19 +971,19 @@ function baseCreateRenderer(
         // oldVNode may be an errored async setup() component inside Suspense
         // which will not have a mounted element
         oldVNode.el &&
-        // - In the case of a Fragment, we need to provide the actual parent
-        // of the Fragment itself so it can move its children.
-        (oldVNode.type === Fragment ||
-          // - In the case of different nodes, there is going to be a replacement
-          // which also requires the correct parent container
-          !isSameVNodeType(oldVNode, newVNode) ||
-          // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag &
+          // - In the case of a Fragment, we need to provide the actual parent
+          // of the Fragment itself so it can move its children.
+          (oldVNode.type === Fragment ||
+            // - In the case of different nodes, there is going to be a replacement
+            // which also requires the correct parent container
+            !isSameVNodeType(oldVNode, newVNode) ||
+            // - In the case of a component, it could contain anything.
+            oldVNode.shapeFlag &
             (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
-            // just pass the block element here to avoid a DOM parentNode call.
-            fallbackContainer
+          // just pass the block element here to avoid a DOM parentNode call.
+          fallbackContainer
       patch(
         oldVNode,
         newVNode,
@@ -1157,7 +1158,7 @@ function baseCreateRenderer(
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        ;(parentComponent!.ctx as KeepAliveContext).activate(
+        ; (parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,
           anchor,
@@ -1189,8 +1190,8 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
     optimized,
   ) => {
-    // 2.x compat may pre-create the component instance before actually
-    // mounting
+    // compat 模式下，根组件实例可能已经提前创建过；否则这里才正式创建组件实例，
+    // 并回填到组件 vnode 的 `component` 字段上。
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     const instance: ComponentInternalInstance =
@@ -1210,12 +1211,13 @@ function baseCreateRenderer(
       startMeasure(instance, `mount`)
     }
 
-    // inject renderer internals for keepAlive
+    // KeepAlive 需要访问 renderer 内部能力来完成缓存节点的激活/失活。
     if (isKeepAlive(initialVNode)) {
-      ;(instance.ctx as KeepAliveContext).renderer = internals
+      ; (instance.ctx as KeepAliveContext).renderer = internals
     }
 
-    // resolve props and slots for setup context
+    // 初始化组件：解析 props / slots，执行 setup()，并为 render 做准备。
+    // compat 预创建实例的场景已经做过这一步，这里不再重复。
     if (!(__COMPAT__ && compatMountInstance)) {
       if (__DEV__) {
         startMeasure(instance, `init`)
@@ -1226,23 +1228,23 @@ function baseCreateRenderer(
       }
     }
 
-    // avoid hydration for hmr updating
+    // HMR 更新时不要复用旧的宿主节点引用，避免误走 hydration 相关逻辑。
     if (__DEV__ && isHmrUpdating) initialVNode.el = null
 
-    // setup() is async. This component relies on async logic to be resolved
-    // before proceeding
+    // 如果 setup() 返回了异步依赖，说明这个组件当前还不能立即进入真正渲染。
+    // 在 Suspense 环境下先注册依赖，等异步完成后再继续挂载。
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
-      // Give it a placeholder if this is not hydration
-      // TODO handle self-defined fallback
+      // 非 hydration 场景下，先放一个注释节点占位，保持 DOM 结构稳定。
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
         initialVNode.placeholder = placeholder.el
       }
     } else {
+      // 同步组件或异步依赖已就绪时，建立渲染副作用，正式开始首屏渲染。
       setupRenderEffect(
         instance,
         initialVNode,
@@ -1356,7 +1358,7 @@ function baseCreateRenderer(
             isAsyncWrapperVNode &&
             (type as ComponentOptions).__asyncHydrate
           ) {
-            ;(type as ComponentOptions).__asyncHydrate!(
+            ; (type as ComponentOptions).__asyncHydrate!(
               el as Element,
               instance,
               hydrateSubTree,
@@ -1997,7 +1999,7 @@ function baseCreateRenderer(
         const anchor =
           nextIndex + 1 < l2
             ? // #13559, #14173 fallback to el placeholder for unresolved async component
-              anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
+            anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
@@ -2045,7 +2047,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.TELEPORT) {
-      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
+      ; (type as typeof TeleportImpl).move(vnode, container, anchor, internals)
       return
     }
 
@@ -2141,7 +2143,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      ; (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
 
@@ -2169,7 +2171,7 @@ function baseCreateRenderer(
       }
 
       if (shapeFlag & ShapeFlags.TELEPORT) {
-        ;(vnode.type as typeof TeleportImpl).remove(
+        ; (vnode.type as typeof TeleportImpl).remove(
           vnode,
           parentComponent,
           parentSuspense,
@@ -2199,7 +2201,7 @@ function baseCreateRenderer(
       } else if (
         (type === Fragment &&
           patchFlag &
-            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
+          (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
@@ -2233,7 +2235,7 @@ function baseCreateRenderer(
         transition &&
         !transition.persisted
       ) {
-        ;(vnode.children as VNode[]).forEach(child => {
+        ; (vnode.children as VNode[]).forEach(child => {
           if (child.type === Comment) {
             hostRemove(child.el!)
           } else {
@@ -2374,13 +2376,19 @@ function baseCreateRenderer(
 
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
+    debugger;
     let instance
+    // 传入 null 表示卸载当前容器里已有的整棵 vnode 树。
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
         instance = container._vnode.component
       }
     } else {
+      // patch 统一处理首次挂载和后续更新：
+      // - 旧 vnode 不存在时是 mount
+      // - 旧 vnode 存在时是 diff + update
+      debugger;
       patch(
         container._vnode || null,
         vnode,
@@ -2391,9 +2399,12 @@ function baseCreateRenderer(
         namespace,
       )
     }
+    // 在容器上缓存本次渲染后的根 vnode，供下次 render 作为旧树参与 patch。
     container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
+      // 本轮 render 结束后统一刷新调度队列中的前置/后置回调，
+      // 避免在渲染过程中发生嵌套 flush。
       flushPreFlushCbs(instance)
       flushPostFlushCbs()
       isFlushing = false

@@ -102,6 +102,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  debugger;
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -207,7 +208,7 @@ function injectCompilerOptionsCheck(app: App) {
       set() {
         warn(
           `The \`isCustomElement\` config option is deprecated. Use ` +
-            `\`compilerOptions.isCustomElement\` instead.`,
+          `\`compilerOptions.isCustomElement\` instead.`,
         )
       },
     })
@@ -302,12 +303,12 @@ let ssrDirectiveInitialized = false
  */
 export const initDirectivesForSSR: () => void = __SSR__
   ? () => {
-      if (!ssrDirectiveInitialized) {
-        ssrDirectiveInitialized = true
-        initVModelForSSR()
-        initVShowForSSR()
-      }
+    if (!ssrDirectiveInitialized) {
+      ssrDirectiveInitialized = true
+      initVModelForSSR()
+      initVShowForSSR()
     }
+  }
   : NOOP
 
 // re-export everything from core

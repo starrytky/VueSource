@@ -255,6 +255,7 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction,
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    debugger;
     if (!isFunction(rootComponent)) {
       rootComponent = extend({}, rootComponent)
     }
@@ -304,7 +305,7 @@ export function createAppAPI<HostElement>(
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
-              `function.`,
+            `function.`,
           )
         }
         return app
@@ -317,7 +318,7 @@ export function createAppAPI<HostElement>(
           } else if (__DEV__) {
             warn(
               'Mixin has already been applied to target app' +
-                (mixin.name ? `: ${mixin.name}` : ''),
+              (mixin.name ? `: ${mixin.name}` : ''),
             )
           }
         } else if (__DEV__) {
@@ -365,10 +366,11 @@ export function createAppAPI<HostElement>(
           if (__DEV__ && (rootContainer as any).__vue_app__) {
             warn(
               `There is already an app instance mounted on the host container.\n` +
-                ` If you want to mount another app on the same host container,` +
-                ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
+              ` If you want to mount another app on the same host container,` +
+              ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
+          debugger;
           const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
@@ -399,8 +401,8 @@ export function createAppAPI<HostElement>(
           }
           isMounted = true
           app._container = rootContainer
-          // for devtools and telemetry
-          ;(rootContainer as any).__vue_app__ = app
+            // for devtools and telemetry
+            ; (rootContainer as any).__vue_app__ = app
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = vnode.component
@@ -411,9 +413,9 @@ export function createAppAPI<HostElement>(
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
-              `If you want to remount the same app, move your app creation logic ` +
-              `into a factory function and create fresh app instances for each ` +
-              `mount - e.g. \`const createMyApp = () => createApp(App)\``,
+            `If you want to remount the same app, move your app creation logic ` +
+            `into a factory function and create fresh app instances for each ` +
+            `mount - e.g. \`const createMyApp = () => createApp(App)\``,
           )
         }
       },
@@ -422,7 +424,7 @@ export function createAppAPI<HostElement>(
         if (__DEV__ && typeof cleanupFn !== 'function') {
           warn(
             `Expected function as first argument to app.onUnmount(), ` +
-              `but got ${typeof cleanupFn}`,
+            `but got ${typeof cleanupFn}`,
           )
         }
         pluginCleanupFns.push(cleanupFn)
@@ -451,13 +453,13 @@ export function createAppAPI<HostElement>(
           if (hasOwn(context.provides, key as string | symbol)) {
             warn(
               `App already provides property with key "${String(key)}". ` +
-                `It will be overwritten with the new value.`,
+              `It will be overwritten with the new value.`,
             )
           } else {
             // #13212, context.provides can inherit the provides object from parent on custom elements
             warn(
               `App already provides property with key "${String(key)}" inherited from its parent element. ` +
-                `It will be overwritten with the new value.`,
+              `It will be overwritten with the new value.`,
             )
           }
         }

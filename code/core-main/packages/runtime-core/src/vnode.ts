@@ -492,26 +492,29 @@ function createBaseVNode(
     ctx: currentRenderingInstance,
   } as VNode
 
+  // 运行时手写 vnode 时，children 可能是文本、数组、slots 对象等多种形态，
+  // 这里要做完整规范化，并顺便把对应的 shapeFlag 补齐。
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
-    // normalize suspense children
+    // Suspense 还需要额外把默认内容和 fallback 子树整理成内部约定结构。
     if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
       ;(type as typeof SuspenseImpl).normalize(vnode)
     }
   } else if (children) {
-    // compiled element vnode - if children is passed, only possible types are
-    // string or Array.
+    // 编译产物里的 element vnode 已经保证 children 只会是 string 或数组，
+    // 所以这里不必做完整规范化，只需快速补上 children 类型标记。
     vnode.shapeFlag |= isString(children)
       ? ShapeFlags.TEXT_CHILDREN
       : ShapeFlags.ARRAY_CHILDREN
   }
 
-  // validate key
+  // key 为 NaN 时会破坏 diff 阶段的比较逻辑，开发环境下直接给出警告。
   if (__DEV__ && vnode.key !== vnode.key) {
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
-  // track vnode for block tree
+  // 把动态 vnode 收集到当前 block 中，更新时只需要重点处理这些动态节点，
+  // 这是 block tree 优化能减少 diff 范围的关键。
   if (
     isBlockTreeEnabled > 0 &&
     // avoid a block node from tracking itself
@@ -530,6 +533,7 @@ function createBaseVNode(
     currentBlock.push(vnode)
   }
 
+  // compat 构建下，补 Vue 2 风格的 v-model 和旧版 vnode 访问能力。
   if (__COMPAT__) {
     convertLegacyVModelProps(vnode)
     defineLegacyVNodeProperties(vnode)
@@ -552,6 +556,7 @@ function _createVNode(
   dynamicProps: string[] | null = null,
   isBlockNode = false,
 ): VNode {
+  debugger;
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
@@ -559,6 +564,8 @@ function _createVNode(
     type = Comment
   }
 
+  // `type` 也可能已经是一个现成的 vnode，这时不再重新创建，
+  // 而是基于它克隆出一个新 vnode，并把本次传入的 children 合并进去。
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
@@ -578,27 +585,27 @@ function _createVNode(
     return cloned
   }
 
-  // class component normalization.
+  // class 风格组件实际要使用其标准化后的组件选项对象。
   if (isClassComponent(type)) {
     type = type.__vccOpts
   }
 
-  // 2.x async/functional component compat
+  // compat 构建下，把 Vue 2 遗留的异步组件/函数式组件形式转成 Vue 3 可识别的类型。
   if (__COMPAT__) {
     type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
-  // class & style normalization.
+  // 标准化 props，确保后续 vnode 创建和 patch 流程拿到的是可安全处理的结构。
   if (props) {
-    // for reactive or proxy objects, we need to clone it to enable mutation.
+    // 对 reactive/proxy props 做一层保护性拷贝，避免后续规范化时直接修改响应式源对象。
     props = guardReactiveProps(props)!
     let { class: klass, style } = props
+    // 把数组 / 对象形式的 class 统一转成规范字符串。
     if (klass && !isString(klass)) {
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
-      // reactive state objects need to be cloned since they are likely to be
-      // mutated
+      // style 也可能来自响应式对象，先拷贝一份，再标准化成统一格式。
       if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
