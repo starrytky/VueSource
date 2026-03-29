@@ -1248,6 +1248,7 @@ function baseCreateRenderer(
         initialVNode.placeholder = placeholder.el
       }
     } else {
+      debugger;
       // 同步组件或异步依赖已就绪时，建立渲染副作用，正式开始首屏渲染。
       setupRenderEffect(
         instance,

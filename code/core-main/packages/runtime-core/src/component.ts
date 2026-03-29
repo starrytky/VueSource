@@ -865,6 +865,7 @@ function setupStatefulComponent(
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
+  debugger;
   // 2. call setup()
   const { setup } = Component
   if (setup) {
