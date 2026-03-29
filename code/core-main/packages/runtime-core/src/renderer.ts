@@ -1155,6 +1155,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
+    debugger;
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
@@ -1166,6 +1167,7 @@ function baseCreateRenderer(
           optimized,
         )
       } else {
+        debugger;
         mountComponent(
           n2,
           container,
@@ -1190,6 +1192,7 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
     optimized,
   ) => {
+    debugger;
     // compat 模式下，根组件实例可能已经提前创建过；否则这里才正式创建组件实例，
     // 并回填到组件 vnode 的 `component` 字段上。
     const compatMountInstance =
@@ -1222,6 +1225,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      debugger;
       setupComponent(instance, false, optimized)
       if (__DEV__) {
         endMeasure(instance, `init`)

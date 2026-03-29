@@ -101,7 +101,7 @@ export type Data = Record<string, unknown>
 /**
  * For extending allowed non-declared attrs on components in TSX
  */
-export interface AllowedAttrs {}
+export interface AllowedAttrs { }
 
 export type Attrs = Data & AllowedAttrs
 
@@ -117,34 +117,34 @@ export type Attrs = Data & AllowedAttrs
  * declare const instance: ComponentInstance<typeof MyComp>
  * ```
  */
-export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+export type ComponentInstance<T> = T extends { new(): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
-    ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
-    : T extends Component<
-          infer PropsOrInstance,
-          infer RawBindings,
-          infer D,
-          infer C,
-          infer M
-        >
-      ? PropsOrInstance extends { $props: unknown }
-        ? // T is returned by `defineComponent()`
-          PropsOrInstance
-        : // NOTE we override Props/RawBindings/D to make sure is not `unknown`
-          ComponentPublicInstance<
-            unknown extends PropsOrInstance ? {} : PropsOrInstance,
-            unknown extends RawBindings ? {} : RawBindings,
-            unknown extends D ? {} : D,
-            C,
-            M
-          >
-      : never // not a vue Component
+  ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
+  : T extends Component<
+    infer PropsOrInstance,
+    infer RawBindings,
+    infer D,
+    infer C,
+    infer M
+  >
+  ? PropsOrInstance extends { $props: unknown }
+  ? // T is returned by `defineComponent()`
+  PropsOrInstance
+  : // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+  ComponentPublicInstance<
+    unknown extends PropsOrInstance ? {} : PropsOrInstance,
+    unknown extends RawBindings ? {} : RawBindings,
+    unknown extends D ? {} : D,
+    C,
+    M
+  >
+  : never // not a vue Component
 
 /**
  * For extending allowed non-declared props on components in TSX
  */
-export interface ComponentCustomProps {}
+export interface ComponentCustomProps { }
 
 /**
  * For globally defined Directives
@@ -161,7 +161,7 @@ export interface ComponentCustomProps {}
  * }
  * ```
  */
-export interface GlobalDirectives {}
+export interface GlobalDirectives { }
 
 /**
  * For globally defined Components
@@ -242,7 +242,7 @@ export interface FunctionalComponent<
 }
 
 export interface ClassComponent {
-  new (...args: any[]): ComponentPublicInstance<any, any, any, any, any>
+  new(...args: any[]): ComponentPublicInstance<any, any, any, any, any>
   __vccOpts: ComponentOptions
 }
 
@@ -290,13 +290,13 @@ export type SetupContext<
   S extends SlotsType = {},
 > = E extends any
   ? {
-      attrs: Attrs
-      slots: UnwrapSlotsType<S>
-      emit: EmitFn<E>
-      expose: <Exposed extends Record<string, any> = Record<string, any>>(
-        exposed?: Exposed,
-      ) => void
-    }
+    attrs: Attrs
+    slots: UnwrapSlotsType<S>
+    emit: EmitFn<E>
+    expose: <Exposed extends Record<string, any> = Record<string, any>>(
+      exposed?: Exposed,
+    ) => void
+  }
   : never
 
 /**
@@ -616,6 +616,7 @@ export function createComponentInstance(
   parent: ComponentInternalInstance | null,
   suspense: SuspenseBoundary | null,
 ): ComponentInternalInstance {
+  debugger;
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -817,7 +818,7 @@ export function setupComponent(
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children, optimized || isSSR)
-
+  debugger;
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -830,6 +831,7 @@ function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean,
 ) {
+  debugger;
   const Component = instance.type as ComponentOptions
 
   if (__DEV__) {
@@ -851,8 +853,8 @@ function setupStatefulComponent(
     if (Component.compilerOptions && isRuntimeOnly()) {
       warn(
         `"compilerOptions" is only supported when using a build of Vue that ` +
-          `includes the runtime compiler. Since you are using a runtime-only ` +
-          `build, the options should be passed via your build tool config instead.`,
+        `includes the runtime compiler. Since you are using a runtime-only ` +
+        `build, the options should be passed via your build tool config instead.`,
       )
     }
   }
@@ -907,15 +909,15 @@ function setupStatefulComponent(
           const name = formatComponentName(instance, Component)
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
-              `<Suspense> boundary was found in the parent component tree. ` +
-              `A component with async setup() must be nested in a <Suspense> ` +
-              `in order to be rendered.`,
+            `<Suspense> boundary was found in the parent component tree. ` +
+            `A component with async setup() must be nested in a <Suspense> ` +
+            `in order to be rendered.`,
           )
         }
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
-            `does not support it yet.`,
+          `does not support it yet.`,
         )
       }
     } else {
@@ -944,7 +946,7 @@ export function handleSetupResult(
     if (__DEV__ && isVNode(setupResult)) {
       warn(
         `setup() should not return VNodes directly - ` +
-          `return a render function instead.`,
+        `return a render function instead.`,
       )
     }
     // setup returned bindings.
@@ -958,8 +960,7 @@ export function handleSetupResult(
     }
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
-      `setup() should return an object. Received: ${
-        setupResult === null ? 'null' : typeof setupResult
+      `setup() should return an object. Received: ${setupResult === null ? 'null' : typeof setupResult
       }`,
     )
   }
@@ -1078,14 +1079,14 @@ export function finishComponentSetup(
       /* v8 ignore start */
       warn(
         `Component provided template option but ` +
-          `runtime compilation is not supported in this build of Vue.` +
-          (__ESM_BUNDLER__
-            ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
-            : __ESM_BROWSER__
-              ? ` Use "vue.esm-browser.js" instead.`
-              : __GLOBAL__
-                ? ` Use "vue.global.js" instead.`
-                : ``) /* should not happen */,
+        `runtime compilation is not supported in this build of Vue.` +
+        (__ESM_BUNDLER__
+          ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
+          : __ESM_BROWSER__
+            ? ` Use "vue.esm-browser.js" instead.`
+            : __GLOBAL__
+              ? ` Use "vue.global.js" instead.`
+              : ``) /* should not happen */,
       )
       /* v8 ignore stop */
     } else {
@@ -1096,26 +1097,26 @@ export function finishComponentSetup(
 
 const attrsProxyHandlers = __DEV__
   ? {
-      get(target: Data, key: string) {
-        markAttrsAccessed()
-        track(target, TrackOpTypes.GET, '')
-        return target[key]
-      },
-      set() {
-        warn(`setupContext.attrs is readonly.`)
-        return false
-      },
-      deleteProperty() {
-        warn(`setupContext.attrs is readonly.`)
-        return false
-      },
-    }
+    get(target: Data, key: string) {
+      markAttrsAccessed()
+      track(target, TrackOpTypes.GET, '')
+      return target[key]
+    },
+    set() {
+      warn(`setupContext.attrs is readonly.`)
+      return false
+    },
+    deleteProperty() {
+      warn(`setupContext.attrs is readonly.`)
+      return false
+    },
+  }
   : {
-      get(target: Data, key: string) {
-        track(target, TrackOpTypes.GET, '')
-        return target[key]
-      },
-    }
+    get(target: Data, key: string) {
+      track(target, TrackOpTypes.GET, '')
+      return target[key]
+    },
+  }
 
 /**
  * Dev-only
