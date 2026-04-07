@@ -78,6 +78,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 let enabledHydration = false
 
 function ensureRenderer() {
+  debugger;
   return (
     renderer ||
     (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
@@ -112,6 +113,7 @@ export const createApp = ((...args) => {
 
   const { mount } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    debugger;
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
@@ -149,6 +151,7 @@ export const createApp = ((...args) => {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
     }
+    debugger;
     return proxy
   }
 

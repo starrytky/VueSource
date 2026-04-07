@@ -314,6 +314,7 @@ export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement,
 >(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement> {
+  debugger;
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
 
@@ -343,6 +344,7 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions,
 ): any {
+  debugger;
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()

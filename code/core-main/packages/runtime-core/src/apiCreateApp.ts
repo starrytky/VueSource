@@ -254,6 +254,7 @@ export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction,
 ): CreateAppFunction<HostElement> {
+  debugger;
   return function createApp(rootComponent, rootProps = null) {
     debugger;
     if (!isFunction(rootComponent)) {
@@ -361,6 +362,7 @@ export function createAppAPI<HostElement>(
         isHydrate?: boolean,
         namespace?: boolean | ElementNamespace,
       ): any {
+        debugger;
         if (!isMounted) {
           // #5571
           if (__DEV__ && (rootContainer as any).__vue_app__) {
@@ -421,6 +423,7 @@ export function createAppAPI<HostElement>(
             `mount - e.g. \`const createMyApp = () => createApp(App)\``,
           )
         }
+        debugger;
       },
 
       onUnmount(cleanupFn: () => void) {
