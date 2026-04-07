@@ -812,6 +812,7 @@ export function setupComponent(
   isSSR = false,
   optimized = false,
 ): Promise<void> | undefined {
+  debugger;
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
@@ -922,7 +923,9 @@ function setupStatefulComponent(
         )
       }
     } else {
+      debugger;
       handleSetupResult(instance, setupResult, isSSR)
+      debugger;
     }
   } else {
     finishComponentSetup(instance, isSSR)
@@ -934,6 +937,7 @@ export function handleSetupResult(
   setupResult: unknown,
   isSSR: boolean,
 ): void {
+  debugger;
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -965,7 +969,10 @@ export function handleSetupResult(
       }`,
     )
   }
+  debugger;
   finishComponentSetup(instance, isSSR)
+  debugger;
+
 }
 
 type CompileFunction = (
@@ -997,6 +1004,7 @@ export function finishComponentSetup(
   isSSR: boolean,
   skipOptions?: boolean,
 ): void {
+  debugger;
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {

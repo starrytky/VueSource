@@ -284,6 +284,36 @@ render
 
 第一天最重要的，不是每个函数内部所有细节，而是要知道“组件 vnode”和“元素 vnode”分别在哪一步被分流处理。
 
+可以顺手把这件事记准确一点：
+
+- vnode 的“类别”不是到了 `patch` 才临时判断的，而是在 `createVNode -> _createVNode` 阶段就先编码进 `shapeFlag`
+- 真正进入不同处理流程，是在 `renderer.ts` 的 `patch` 里根据 `shapeFlag` 分流
+
+也就是说：
+
+1. 如果 `type` 是字符串，比如 `'div'`，在 `_createVNode` 里会得到 `ShapeFlags.ELEMENT`
+2. 如果 `type` 是组件对象或函数，在 `_createVNode` 里会得到 `ShapeFlags.STATEFUL_COMPONENT` 或 `ShapeFlags.FUNCTIONAL_COMPONENT`
+3. 到了 `patch`，先处理 `Text`、`Comment`、`Fragment`、`Static` 这些特殊类型
+4. 剩下的普通 vnode 再进入默认分支：
+   - `shapeFlag & ShapeFlags.ELEMENT` -> `processElement`
+   - `shapeFlag & ShapeFlags.COMPONENT` -> `processComponent`
+
+所以可以用一句话概括：
+
+`createVNode` 负责“给 vnode 贴标签”，`patch` 负责“按标签分流执行”。
+
+再往下看时要特别注意一层递归：
+
+- 组件 vnode 第一次进入 `patch` 时，会走 `processComponent -> mountComponent`
+- 组件完成 `setup` 和 `render` 之后，会产出一个 `subTree`
+- 这个 `subTree` 会再次进入 `patch`
+- 这时候如果 `subTree` 是元素 vnode，才会走到 `processElement -> mountElement`
+
+所以你在调试时看到的其实是两次不同语义的 `patch`：
+
+- 第一次 `patch`：处理“组件 vnode 应该如何挂载”
+- 第二次 `patch`：处理“组件 render 出来的子树 vnode 应该如何挂载”
+
 ## 9. 第一天第五组断点
 
 ### 9.1 `packages/runtime-core/src/component.ts`

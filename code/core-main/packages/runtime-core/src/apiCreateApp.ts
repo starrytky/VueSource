@@ -372,6 +372,7 @@ export function createAppAPI<HostElement>(
           }
           debugger;
           const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
+          debugger;
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -397,7 +398,9 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            debugger;
             render(vnode, rootContainer, namespace)
+            debugger;
           }
           isMounted = true
           app._container = rootContainer
@@ -483,7 +486,7 @@ export function createAppAPI<HostElement>(
     if (__COMPAT__) {
       installAppCompatProperties(app, context, render)
     }
-
+    debugger;
     return app
   }
 }

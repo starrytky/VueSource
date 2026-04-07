@@ -429,6 +429,7 @@ function baseCreateRenderer(
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
+          debugger;
           processElement(
             n1,
             n2,
@@ -440,6 +441,7 @@ function baseCreateRenderer(
             slotScopeIds,
             optimized,
           )
+          debugger;
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(
             n1,
@@ -604,6 +606,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
+    debugger;
     if (n2.type === 'svg') {
       namespace = 'svg'
     } else if (n2.type === 'math') {
@@ -611,6 +614,7 @@ function baseCreateRenderer(
     }
 
     if (n1 == null) {
+      debugger;
       mountElement(
         n2,
         container,
@@ -621,6 +625,7 @@ function baseCreateRenderer(
         slotScopeIds,
         optimized,
       )
+      debugger;
     } else {
       const customElement =
         n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
@@ -657,6 +662,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
+    debugger;
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
     const { props, shapeFlag, transition, dirs } = vnode
@@ -1227,6 +1233,7 @@ function baseCreateRenderer(
       }
       debugger;
       setupComponent(instance, false, optimized)
+      debugger;
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1307,6 +1314,7 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
     optimized,
   ) => {
+    debugger;
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
@@ -1340,7 +1348,9 @@ function baseCreateRenderer(
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
+            debugger;
             instance.subTree = renderComponentRoot(instance)
+            debugger;
             if (__DEV__) {
               endMeasure(instance, `render`)
             }
@@ -1390,6 +1400,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          debugger;
           patch(
             null,
             subTree,
@@ -1399,6 +1410,7 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
           )
+          debugger;
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
@@ -2436,7 +2448,7 @@ function baseCreateRenderer(
       internals as RendererInternals<Node, Element>,
     )
   }
-
+  debugger;
   return {
     render,
     hydrate,
