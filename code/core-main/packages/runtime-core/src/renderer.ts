@@ -445,6 +445,7 @@ function baseCreateRenderer(
           )
           debugger;
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          debugger;
           processComponent(
             n1,
             n2,
@@ -456,6 +457,7 @@ function baseCreateRenderer(
             slotScopeIds,
             optimized,
           )
+          debugger;
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           ; (type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
@@ -629,6 +631,7 @@ function baseCreateRenderer(
       )
       debugger;
     } else {
+      debugger;
       const customElement =
         n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
           ? (n1.el as ComponentCustomElementInterface)
@@ -637,6 +640,7 @@ function baseCreateRenderer(
         if (customElement) {
           customElement._beginPatch()
         }
+        debugger;
         patchElement(
           n1,
           n2,
@@ -646,6 +650,7 @@ function baseCreateRenderer(
           slotScopeIds,
           optimized,
         )
+        debugger;
       } finally {
         if (customElement) {
           customElement._endPatch()
@@ -830,6 +835,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
+    debugger;
     const el = (n2.el = n1.el!)
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       el.__vnode = n2
@@ -959,6 +965,7 @@ function baseCreateRenderer(
         dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
       }, parentSuspense)
     }
+    debugger;
   }
 
   // The fast path for blocks.
@@ -1185,9 +1192,12 @@ function baseCreateRenderer(
           namespace,
           optimized,
         )
+        debugger;
       }
     } else {
+      debugger;
       updateComponent(n1, n2, optimized)
+      debugger;
     }
   }
 
@@ -1268,6 +1278,7 @@ function baseCreateRenderer(
         namespace,
         optimized,
       )
+      debugger;
     }
 
     if (__DEV__) {
@@ -1277,6 +1288,7 @@ function baseCreateRenderer(
   }
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+    debugger;
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
@@ -1317,6 +1329,9 @@ function baseCreateRenderer(
     optimized,
   ) => {
     debugger;
+    // 组件渲染副作用函数：
+    // - 首次执行时完成组件挂载
+    // - 后续响应式依赖变更时完成组件更新
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
@@ -1345,12 +1360,14 @@ function baseCreateRenderer(
         toggleRecurse(instance, true)
 
         if (el && hydrateNode) {
+          // SSR 场景下已有真实节点时，走 hydrate，而不是重新 mount。
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
             debugger;
+            // 执行组件 render，得到当前组件渲染出的子树 vnode。
             instance.subTree = renderComponentRoot(instance)
             debugger;
             if (__DEV__) {
@@ -1395,7 +1412,10 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
+          debugger;
+          // 首次渲染组件，拿到 render 产出的子树 vnode。
           const subTree = (instance.subTree = renderComponentRoot(instance))
+          debugger;
           if (__DEV__) {
             endMeasure(instance, `render`)
           }
@@ -1403,6 +1423,7 @@ function baseCreateRenderer(
             startMeasure(instance, `patch`)
           }
           debugger;
+          // 首次挂载时 old vnode 为 null，因此 patch 会进入挂载流程。
           patch(
             null,
             subTree,
@@ -1507,9 +1528,11 @@ function baseCreateRenderer(
         // Disallow component effect recursion during pre-lifecycle hooks.
         toggleRecurse(instance, false)
         if (next) {
+          // 父组件传入了新的 vnode，先把新的 props / slots 同步到实例上。
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
         } else {
+          // next 为空说明是组件自身状态变更触发的更新。
           next = vnode
         }
 
@@ -1533,7 +1556,10 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        debugger;
+        // 更新时重新执行 render，得到新的子树 vnode。
         const nextTree = renderComponentRoot(instance)
+        debugger;
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
@@ -1543,6 +1569,8 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
+        debugger
+        // 更新时 patch 比较的是旧子树和新子树。
         patch(
           prevTree,
           nextTree,
@@ -1554,6 +1582,7 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
         )
+        debugger;
         if (__DEV__) {
           endMeasure(instance, `patch`)
         }
@@ -1595,7 +1624,8 @@ function baseCreateRenderer(
       }
     }
 
-    // create reactive effect for rendering
+    // 为组件渲染创建响应式副作用。
+    // 依赖变更后不会立刻同步重跑，而是通过 scheduler 进入队列。
     instance.scope.on()
     const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
     instance.scope.off()
@@ -1619,6 +1649,7 @@ function baseCreateRenderer(
         : void 0
     }
 
+    // 首次立即执行一次，完成组件初次挂载。
     update()
   }
 

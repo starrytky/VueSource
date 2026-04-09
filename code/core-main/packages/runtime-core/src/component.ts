@@ -807,6 +807,18 @@ export function isStatefulComponent(
 
 export let isInSSRComponentSetup = false
 
+/**
+ * 为组件实例完成渲染前的初始化。
+ *
+ * 主要职责：
+ * 1. 在服务端渲染场景下，标记当前处于 SSR 组件初始化阶段。
+ * 2. 将 vnode 上的输入整理到组件实例上，主要是 props 和 slots。
+ * 3. 如果当前是有状态组件，则继续进入 `setupStatefulComponent`，
+ *    创建渲染代理并执行 `setup()`。
+ *
+ * 只有在 SSR 遇到异步 setup 时才会返回 Promise，
+ * 这样服务端渲染器才能等待组件初始化完成。
+ */
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
@@ -817,9 +829,11 @@ export function setupComponent(
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
+  // 将 vnode 上的 props / children 初始化到组件实例上。
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children, optimized || isSSR)
   debugger;
+  // 只有有状态组件才需要继续执行完整的 setup 初始化流程。
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined

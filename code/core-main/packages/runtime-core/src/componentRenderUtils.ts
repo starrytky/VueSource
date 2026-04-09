@@ -69,9 +69,11 @@ export function renderComponentRoot(
     ctx,
     inheritAttrs,
   } = instance
+  // 标记当前正在执行 render 的组件实例，供运行时上下文读取。
   const prev = setCurrentRenderingInstance(instance)
 
   let result
+  // 记录需要继续透传给根节点的 attrs。
   let fallthroughAttrs
   if (__DEV__) {
     accessedAttrs = false
@@ -79,6 +81,7 @@ export function renderComponentRoot(
 
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      // 有状态组件：执行组件实例上的 render，产出子树 vnode。
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
@@ -108,9 +111,10 @@ export function renderComponentRoot(
           ctx,
         ),
       )
+      // 状态组件默认把 attrs 作为 fallthroughAttrs 继续处理。
       fallthroughAttrs = attrs
     } else {
-      // functional
+      // 函数组件：直接调用函数组件本身，产出子树 vnode。
       const render = Component as FunctionalComponent
       // in dev, mark attrs accessed if optional props (attrs === props)
       if (__DEV__ && attrs === props) {
@@ -136,6 +140,7 @@ export function renderComponentRoot(
               null as any /* we know it doesn't need it */,
             ),
       )
+      // 函数组件是否透传 attrs，取决于其是否声明 props。
       fallthroughAttrs = Component.props
         ? attrs
         : getFunctionalFallthrough(attrs)
@@ -143,9 +148,11 @@ export function renderComponentRoot(
   } catch (err) {
     blockStack.length = 0
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
+    // render 出错时兜底为注释节点，避免整棵树直接中断。
     result = createVNode(Comment)
   }
 
+  // 下面开始处理根节点层面的“继承”逻辑，例如 attrs / directives / transition。
   // attr merging
   // in dev mode, comments are preserved, and it's possible for a template
   // to have comments along side the root element which makes it a fragment
@@ -164,6 +171,7 @@ export function renderComponentRoot(
     const { shapeFlag } = root
     if (keys.length) {
       if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+        // 根节点是元素或组件时，才可以把多余 attrs 继续透传下去。
         if (propsOptions && keys.some(isModelListener)) {
           // If a v-model listener (onUpdate:xxx) has a corresponding declared
           // prop, it indicates this component expects to handle v-model and
@@ -174,8 +182,10 @@ export function renderComponentRoot(
             propsOptions,
           )
         }
+        // 通过克隆根 vnode，把 fallthroughAttrs 合并到根节点上。
         root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
+        // 根节点不是元素/组件时，attrs 无法自动继承，开发环境下给出提示。
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []
         const extraAttrs: string[] = []
@@ -241,6 +251,7 @@ export function renderComponentRoot(
     }
   }
 
+  // 组件 vnode 上的指令需要继续挂到最终根节点上。
   // inherit directives
   if (vnode.dirs) {
     if (__DEV__ && !isElementRoot(root)) {
@@ -253,6 +264,7 @@ export function renderComponentRoot(
     root = cloneVNode(root, null, false, true)
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
+  // 组件 vnode 上的 transition 信息也要继续传给最终根节点。
   // inherit transition data
   if (vnode.transition) {
     if (__DEV__ && !isElementRoot(root)) {
@@ -270,6 +282,7 @@ export function renderComponentRoot(
     result = root
   }
 
+  // 恢复上一个正在 render 的组件实例。
   setCurrentRenderingInstance(prev)
   return result
 }
