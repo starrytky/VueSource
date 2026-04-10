@@ -131,15 +131,15 @@ export const SuspenseImpl = {
 export const Suspense = (__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as unknown as {
-  __isSuspense: true
-  new (): {
-    $props: VNodeProps & SuspenseProps
-    $slots: {
-      default(): VNode[]
-      fallback(): VNode[]
+    __isSuspense: true
+    new(): {
+      $props: VNodeProps & SuspenseProps
+      $slots: {
+        default(): VNode[]
+        fallback(): VNode[]
+      }
     }
   }
-}
 
 function triggerEvent(
   vnode: VNode,
@@ -723,6 +723,7 @@ function createSuspenseBoundary(
             vnode.el = hydratedEl
           }
           const placeholder = !hydratedEl && instance.subTree.el
+          debugger;
           setupRenderEffect(
             instance,
             vnode,
@@ -737,6 +738,7 @@ function createSuspenseBoundary(
             namespace,
             optimized,
           )
+          debugger;
           if (placeholder) {
             // clean up placeholder reference
             vnode.placeholder = null

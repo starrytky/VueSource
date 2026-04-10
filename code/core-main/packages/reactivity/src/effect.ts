@@ -85,8 +85,7 @@ export interface Subscriber extends DebuggerOptions {
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()
 
 export class ReactiveEffect<T = any>
-  implements Subscriber, ReactiveEffectOptions
-{
+  implements Subscriber, ReactiveEffectOptions {
   /**
    * @internal
    */
@@ -170,7 +169,7 @@ export class ReactiveEffect<T = any>
       if (__DEV__ && activeSub !== this) {
         warn(
           'Active effect was not restored correctly - ' +
-            'this is likely a Vue internal bug.',
+          'this is likely a Vue internal bug.',
         )
       }
       cleanupDeps(this)
@@ -193,13 +192,17 @@ export class ReactiveEffect<T = any>
   }
 
   trigger(): void {
+    debugger;
     if (this.flags & EffectFlags.PAUSED) {
       pausedQueueEffects.add(this)
     } else if (this.scheduler) {
+      debugger;
       this.scheduler()
+      debugger;
     } else {
       this.runIfDirty()
     }
+    debugger;
   }
 
   /**
@@ -286,7 +289,7 @@ export function endBatch(): void {
       if (e.flags & EffectFlags.ACTIVE) {
         try {
           // ACTIVE flag is effect-only
-          ;(e as ReactiveEffect).trigger()
+          ; (e as ReactiveEffect).trigger()
         } catch (err) {
           if (!error) error = err
         }
@@ -550,7 +553,7 @@ export function onEffectCleanup(fn: () => void, failSilently = false): void {
   } else if (__DEV__ && !failSilently) {
     warn(
       `onEffectCleanup() was called when there was no active effect` +
-        ` to associate with.`,
+      ` to associate with.`,
     )
   }
 }

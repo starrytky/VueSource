@@ -62,6 +62,7 @@ export function nextTick<T, R>(
   this: T,
   fn?: (this: T) => R | Promise<R>,
 ): Promise<void | R> {
+  debugger;
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
@@ -97,6 +98,7 @@ function findInsertionIndex(id: number) {
 }
 
 export function queueJob(job: SchedulerJob): void {
+  debugger;
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     const jobId = getId(job)
     const lastJob = queue[queue.length - 1]
@@ -112,14 +114,19 @@ export function queueJob(job: SchedulerJob): void {
 
     job.flags! |= SchedulerJobFlags.QUEUED
 
+    debugger;
     queueFlush()
+    debugger;
   }
+  debugger;
 }
 
 function queueFlush() {
+  debugger;
   if (!currentFlushPromise) {
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
+  debugger;
 }
 
 export function queuePostFlushCb(cb: SchedulerJobs): void {
@@ -212,6 +219,7 @@ const getId = (job: SchedulerJob): number =>
   job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
 function flushJobs(seen?: CountMap) {
+  debugger;
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -262,9 +270,12 @@ function flushJobs(seen?: CountMap) {
     currentFlushPromise = null
     // If new jobs have been added to either queue, keep flushing
     if (queue.length || pendingPostFlushCbs.length) {
+      debugger;
       flushJobs(seen)
+      debugger;
     }
   }
+  debugger;
 }
 
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
@@ -273,13 +284,12 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
     const instance = fn.i
     const componentName = instance && getComponentName(instance.type)
     handleError(
-      `Maximum recursive updates exceeded${
-        componentName ? ` in component <${componentName}>` : ``
+      `Maximum recursive updates exceeded${componentName ? ` in component <${componentName}>` : ``
       }. ` +
-        `This means you have a reactive effect that is mutating its own ` +
-        `dependencies and thus recursively triggering itself. Possible sources ` +
-        `include component template, render function, updated hook or ` +
-        `watcher source function.`,
+      `This means you have a reactive effect that is mutating its own ` +
+      `dependencies and thus recursively triggering itself. Possible sources ` +
+      `include component template, render function, updated hook or ` +
+      `watcher source function.`,
       null,
       ErrorCodes.APP_ERROR_HANDLER,
     )

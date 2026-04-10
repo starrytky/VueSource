@@ -105,6 +105,7 @@ export const hydrate = ((...args) => {
 export const createApp = ((...args) => {
   debugger;
   const app = ensureRenderer().createApp(...args)
+  debugger;
 
   if (__DEV__) {
     injectNativeTagCheck(app)

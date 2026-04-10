@@ -753,6 +753,7 @@ function baseCreateRenderer(
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
     }
+    debugger
   }
 
   const setScopeId = (
@@ -1333,6 +1334,7 @@ function baseCreateRenderer(
     // - 首次执行时完成组件挂载
     // - 后续响应式依赖变更时完成组件更新
     const componentUpdateFn = () => {
+      debugger;
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1634,7 +1636,9 @@ function baseCreateRenderer(
     const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
     job.i = instance
     job.id = instance.uid
+    debugger;
     effect.scheduler = () => queueJob(job)
+    debugger;
 
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1648,9 +1652,10 @@ function baseCreateRenderer(
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
     }
-
+    debugger
     // 首次立即执行一次，完成组件初次挂载。
     update()
+    debugger
   }
 
   const updateComponentPreRender = (
