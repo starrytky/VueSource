@@ -113,9 +113,11 @@ export class ReactiveEffect<T = any>
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
+    debugger;
     if (activeEffectScope && activeEffectScope.active) {
       activeEffectScope.effects.push(this)
     }
+    debugger;
   }
 
   pause(): void {
@@ -149,7 +151,7 @@ export class ReactiveEffect<T = any>
 
   run(): T {
     // TODO cleanupEffect
-
+    debugger;
     if (!(this.flags & EffectFlags.ACTIVE)) {
       // stopped during cleanup
       return this.fn()
@@ -177,6 +179,7 @@ export class ReactiveEffect<T = any>
       shouldTrack = prevShouldTrack
       this.flags &= ~EffectFlags.RUNNING
     }
+    debugger;
   }
 
   stop(): void {
@@ -210,7 +213,9 @@ export class ReactiveEffect<T = any>
    */
   runIfDirty(): void {
     if (isDirty(this)) {
+      debugger;
       this.run()
+      debugger;
     }
   }
 

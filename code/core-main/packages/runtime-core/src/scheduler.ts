@@ -100,6 +100,12 @@ function findInsertionIndex(id: number) {
 export function queueJob(job: SchedulerJob): void {
   debugger;
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
+    console.log('push job', {
+      id: job.id,
+      pre: !!(job.flags! & SchedulerJobFlags.PRE),
+      isComponentUpdate: !!job.i && job === job.i.job,
+    })
+    debugger
     const jobId = getId(job)
     const lastJob = queue[queue.length - 1]
     if (
@@ -130,6 +136,7 @@ function queueFlush() {
 }
 
 export function queuePostFlushCb(cb: SchedulerJobs): void {
+  debugger;
   if (!isArray(cb)) {
     if (activePostFlushCbs && cb.id === -1) {
       activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
@@ -143,7 +150,9 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
     // we can skip duplicate check here to improve perf
     pendingPostFlushCbs.push(...cb)
   }
+  debugger;
   queueFlush()
+  debugger;
 }
 
 export function flushPreFlushCbs(

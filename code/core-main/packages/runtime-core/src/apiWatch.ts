@@ -36,10 +36,10 @@ type MaybeUndefined<T, I> = I extends true ? T | undefined : T
 
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? MaybeUndefined<V, Immediate>
-    : T[K] extends object
-      ? MaybeUndefined<T[K], Immediate>
-      : never
+  ? MaybeUndefined<V, Immediate>
+  : T[K] extends object
+  ? MaybeUndefined<T[K], Immediate>
+  : never
 }
 
 export interface WatchEffectOptions extends DebuggerOptions {
@@ -136,8 +136,8 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
-        `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
-        `supports \`watch(source, cb, options?) signature.`,
+      `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
+      `supports \`watch(source, cb, options?) signature.`,
     )
   }
   return doWatch(source as any, cb, options)
@@ -148,25 +148,26 @@ function doWatch(
   cb: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
+  debugger;
   const { immediate, deep, flush, once } = options
 
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
+        `watch(source, callback, options?) signature.`,
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
+        `watch(source, callback, options?) signature.`,
       )
     }
     if (once !== undefined) {
       warn(
         `watch() "once" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
+        `watch(source, callback, options?) signature.`,
       )
     }
   }
@@ -183,7 +184,7 @@ function doWatch(
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else if (!runsImmediately) {
-      const watchStopHandle = () => {}
+      const watchStopHandle = () => { }
       watchStopHandle.stop = NOOP
       watchStopHandle.resume = NOOP
       watchStopHandle.pause = NOOP
@@ -197,22 +198,37 @@ function doWatch(
 
   // scheduler
   let isPre = false
+  debugger
   if (flush === 'post') {
+    // post: 将 watcher 回调放到组件渲染完成之后执行，
+    // 这样回调访问到的是已经更新后的 DOM。
     baseWatchOptions.scheduler = job => {
+      debugger;
       queuePostRenderEffect(job, instance && instance.suspense)
+      debugger;
     }
   } else if (flush !== 'sync') {
     // default: 'pre'
+    // pre: 默认在组件更新前调度。
+    // 首次执行直接同步运行，用来立即建立依赖；
+    // 后续变更再进入调度队列，和组件更新流程对齐。
     isPre = true
     baseWatchOptions.scheduler = (job, isFirstRun) => {
+      debugger;
       if (isFirstRun) {
+        debugger;
         job()
+        debugger;
       } else {
+        debugger;
         queueJob(job)
+        debugger;
       }
+      debugger;
     }
   }
-
+  // sync: 不设置自定义 scheduler，依赖触发时立即执行 job。
+  debugger
   baseWatchOptions.augmentJob = (job: SchedulerJob) => {
     // important: mark the job as a watcher callback so that scheduler knows
     // it is allowed to self-trigger (#1727)
@@ -223,7 +239,7 @@ function doWatch(
       job.flags! |= SchedulerJobFlags.PRE
       if (instance) {
         job.id = instance.uid
-        ;(job as SchedulerJob).i = instance
+          ; (job as SchedulerJob).i = instance
       }
     }
   }
@@ -237,7 +253,7 @@ function doWatch(
       watchHandle()
     }
   }
-
+  debugger
   return watchHandle
 }
 
