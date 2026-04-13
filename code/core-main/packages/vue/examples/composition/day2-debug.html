@@ -1,0 +1,71 @@
+<div id="app"></div>
+<script src="../../dist/vue.global.js"></script>
+<script>
+  const { createApp, h, ref, watch, nextTick } = Vue
+
+  const Child = {
+    props: ['n'],
+    setup(props) {
+      watch(
+        () => props.n,
+        () => console.log('child pre watch', props.n)
+      )
+
+      watch(
+        () => props.n,
+        () => console.log('child post watch', props.n),
+        { flush: 'post' }
+      )
+
+      return () => h('p', `child: ${props.n}`)
+    },
+  }
+
+  const App = {
+    setup() {
+      const count = ref(0)
+
+      watch(count, () => console.log('parent pre watch', count.value))
+      watch(
+        count,
+        () => console.log('parent post watch', count.value),
+        { flush: 'post' }
+      )
+      watch(
+        count,
+        () => console.log('parent sync watch', count.value),
+        { flush: 'sync' }
+      )
+
+      window.bump = () => {
+        count.value++
+        count.value++
+        count.value++
+      }
+
+      window.bumpAndTick = async () => {
+        count.value++
+        console.log('after set')
+        await nextTick()
+        console.log('after nextTick')
+      }
+
+      return () =>
+        h('div', [
+          h(
+            'button',
+            {
+              onClick() {
+                count.value++
+                count.value++
+              },
+            },
+            `count: ${count.value}`
+          ),
+          h(Child, { n: count.value }),
+        ])
+    },
+  }
+
+  createApp(App).mount('#app')
+</script>
