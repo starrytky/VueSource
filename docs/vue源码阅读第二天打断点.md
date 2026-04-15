@@ -6,13 +6,26 @@
 第二天不要扩散到整个响应式系统，也不要急着啃完整 diff。先只把这一条更新链路打通：
 
 1. 修改响应式状态
+   对应：`packages/reactivity/src/baseHandlers.ts` 的 `MutableReactiveHandler.set` / `deleteProperty`，继续进入 `packages/reactivity/src/dep.ts` 的 `trigger`
 2. 组件 render effect 被触发
+   对应：`packages/reactivity/src/dep.ts` 的 `Dep.trigger` / `notify`，再进入 `packages/reactivity/src/effect.ts` 的 `ReactiveEffect.trigger`
 3. effect 不立刻重跑，而是交给 scheduler
+   对应：`packages/reactivity/src/effect.ts` 的 `ReactiveEffect.trigger`
+   关键绑定发生在：`packages/runtime-core/src/renderer.ts` 的 `setupRenderEffect`，这里把 `effect.scheduler` 设为 `() => queueJob(job)`
 4. scheduler 把 job 放进队列并去重
+   对应：`packages/runtime-core/src/scheduler.ts` 的 `queueJob`，需要时会调用 `findInsertionIndex`，并通过 `SchedulerJobFlags.QUEUED` 去重
 5. flush 时按顺序执行 job
+   对应：`packages/runtime-core/src/scheduler.ts` 的 `queueFlush` 与 `flushJobs`
 6. 组件重新 `render`
+   对应：`packages/runtime-core/src/renderer.ts` 的 `setupRenderEffect` 里 `componentUpdateFn`
+   真正执行组件 `render` 的方法是：`packages/runtime-core/src/componentRenderUtils.ts` 的 `renderComponentRoot`
 7. `patch(prevTree, nextTree)` 完成一次更新
+   对应：`packages/runtime-core/src/renderer.ts` 的 `componentUpdateFn` 更新分支里的 `patch`
 8. `watch` / 生命周期钩子在 pre / post 阶段插入执行
+   `watch` 调度对应：`packages/runtime-core/src/apiWatch.ts` 的 `doWatch`
+   `pre` 阶段执行对应：`packages/runtime-core/src/renderer.ts` 的 `updateComponentPreRender` -> `flushPreFlushCbs(instance)`
+   `post` 阶段执行对应：`packages/runtime-core/src/renderer.ts` 的 `queuePostRenderEffect`，最终进入 `packages/runtime-core/src/scheduler.ts` 的 `queuePostFlushCb` / `flushPostFlushCbs`
+   生命周期注册对应：`packages/runtime-core/src/apiLifecycle.ts` 的 `injectHook`；执行时机在 `packages/runtime-core/src/renderer.ts` 里通过 `invokeArrayFns` 或 `queuePostRenderEffect` 安排
 
 如果你能回答“组件更新为什么会合并”和“`watch` 为什么有 `pre/post/sync` 三种时机”，第二天就算过关。
 
@@ -37,6 +50,245 @@
 3. 为什么组件更新顺序通常是父组件先、子组件后？
 4. `watch` 的 `flush: 'pre' | 'post' | 'sync'` 到底分别插在哪里？
 5. 组件更新时，什么时候只是更新 `props/slots`，什么时候会真正进入重新 `render + patch`？
+
+## 3.1 这五个问题的直接答案
+
+### 3.1.1 同一个 tick 内多次改状态，为什么通常只会触发一次组件更新？
+
+因为多次状态变更最后都会落到同一个组件的同一个 `job` 上，而这个 `job` 在同一轮 flush 里只会入队一次。
+
+调用链可以先记成这样：
+
+```text
+响应式 set
+  -> trigger(...)
+  -> 组件 render effect 被触发
+  -> effect.scheduler()
+  -> queueJob(instance.job)
+```
+
+组件更新相关的 scheduler 绑定发生在 `packages/runtime-core/src/renderer.ts` 的 `setupRenderEffect`：
+
+```ts
+const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
+const update = (instance.update = effect.run.bind(effect))
+const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+job.id = instance.uid
+effect.scheduler = () => queueJob(job)
+```
+
+关键点不在“有没有触发多次响应式”，而在“多次触发是不是都落到了同一个 `instance.job` 上”。
+
+像下面这种代码：
+
+```js
+count.value++
+count.value++
+count.value++
+```
+
+通常确实会触发三次依赖通知，但这三次最终都会去调用同一个 `queueJob(instance.job)`，所以最后只会看到一次组件更新。
+
+### 3.1.2 调度器怎样避免同一个组件重复入队？
+
+答案就是 `SchedulerJobFlags.QUEUED`。
+
+在 `packages/runtime-core/src/scheduler.ts` 的 `queueJob` 里，Vue 会先检查这个 job 是否已经带有 `QUEUED` 标记：
+
+```ts
+if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
+  ...
+  job.flags! |= SchedulerJobFlags.QUEUED
+  queueFlush()
+}
+```
+
+这意味着：
+
+- 第一次入队时，job 被放进队列，并打上 `QUEUED`
+- 同一轮 flush 结束前，再次尝试 `queueJob(job)` 会被直接跳过
+- 等 `flushJobs()` 真正执行完它，再把 `QUEUED` 清掉
+
+所以“避免重复入队”不是靠比较组件实例，也不是靠比较 vnode，而是靠“同一个稳定的 job 引用 + QUEUED 标记”。
+
+### 3.1.3 为什么组件更新顺序通常是父组件先、子组件后？
+
+因为调度器会按 job 的 `id` 排序，而组件 job 的 `id` 就是组件实例的 `uid`。
+
+在 `packages/runtime-core/src/renderer.ts` 的 `setupRenderEffect` 里：
+
+```ts
+const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+job.id = instance.uid
+```
+
+在 `packages/runtime-core/src/scheduler.ts` 里，入队时会根据 `id` 决定插入位置：
+
+```ts
+queue.splice(findInsertionIndex(jobId), 0, job)
+```
+
+而父组件通常总是比子组件更早创建，所以：
+
+- 父组件 `uid` 更小
+- 子组件 `uid` 更大
+- flush 时父组件 job 通常先执行，子组件 job 通常后执行
+
+所以这个顺序本质上是“创建顺序 -> `uid` 顺序 -> scheduler 执行顺序”。
+
+### 3.1.4 `watch` 的 `flush: 'pre' | 'post' | 'sync'` 到底分别插在哪里？
+
+这一点主要看 `packages/runtime-core/src/apiWatch.ts` 的 `doWatch`。
+
+#### `flush: 'sync'`
+
+`sync` 不会走 scheduler 队列。依赖一触发，watch job 就立刻执行。
+
+可以把它理解成：
+
+```text
+响应式变更
+  -> 直接执行 watcher job
+```
+
+所以它的特点是：同步、立即、不合并。
+
+#### `flush: 'pre'`
+
+`pre` 是默认值。它的调度逻辑是：
+
+- 首次运行直接同步执行，用来建立依赖
+- 后续更新时走 `queueJob(job)`
+- 并且会给 job 打上 `PRE` 标记
+
+`apiWatch.ts` 里对应的是：
+
+```ts
+isPre = true
+baseWatchOptions.scheduler = (job, isFirstRun) => {
+  if (isFirstRun) {
+    job()
+  } else {
+    queueJob(job)
+  }
+}
+```
+
+然后在 `augmentJob` 里补上：
+
+```ts
+job.flags! |= SchedulerJobFlags.PRE
+job.id = instance.uid
+job.i = instance
+```
+
+它的执行位置可以理解成“组件真正重新 render 之前”。
+
+尤其是父组件给子组件传了新 `props` 时，Vue 会先在 `updateComponentPreRender()` 里同步 `props / slots`，然后立刻：
+
+```ts
+flushPreFlushCbs(instance)
+```
+
+也就是说，`pre` watcher 看到的是：
+
+- 响应式值已经变了
+- 但这次组件的 `render + patch` 还没执行
+- 如果去碰 DOM，通常看到的还是更新前的 DOM
+
+#### `flush: 'post'`
+
+`post` 会被塞进 `queuePostRenderEffect(...)`，最终进入 `queuePostFlushCb(...)`。
+
+这类回调不是在主队列里跑，而是在 `flushJobs()` 执行完主更新队列之后，由 `flushPostFlushCbs()` 统一执行。
+
+所以 `post` watcher 看到的是：
+
+- 当前这轮组件更新已经完成
+- DOM 已经 patch 完
+- 适合读取更新后的 DOM
+
+#### 一句话记忆
+
+- `sync`：依赖一变，立刻执行
+- `pre`：组件本轮 `render` 之前执行
+- `post`：组件本轮 `patch` 之后执行
+
+### 3.1.5 组件更新时，什么时候只是更新 `props/slots`，什么时候会真正进入重新 `render + patch`？
+
+这件事主要看 `packages/runtime-core/src/renderer.ts` 的 `updateComponent` 和 `componentUpdateFn`。
+
+#### 情况一：根本不需要更新
+
+如果 `shouldUpdateComponent(n1, n2, optimized)` 返回 `false`，那就不会进入组件更新流程。
+
+Vue 只会做两件事：
+
+```ts
+n2.el = n1.el
+instance.vnode = n2
+```
+
+也就是：
+
+- 不重新 render
+- 不 patch
+- 只是把 vnode / el 对齐一下
+
+#### 情况二：异步组件还没 resolve，只先同步 `props/slots`
+
+在 `updateComponent()` 里，如果组件还是异步 pending 状态：
+
+```ts
+if (__FEATURE_SUSPENSE__ && instance.asyncDep && !instance.asyncResolved) {
+  updateComponentPreRender(instance, n2, optimized)
+  return
+}
+```
+
+这里会走 `updateComponentPreRender()`，它会：
+
+- `instance.vnode = nextVNode`
+- `instance.next = null`
+- `updateProps(...)`
+- `updateSlots(...)`
+- `flushPreFlushCbs(instance)`
+
+然后直接返回，不进入后面的 `render + patch`。
+
+所以这是“只更新 `props/slots`，但先不重渲染”的典型场景。
+
+#### 情况三：正常组件更新，真正进入 `render + patch`
+
+最常见的是这条路径：
+
+```ts
+instance.next = n2
+instance.update()
+```
+
+然后进入 `setupRenderEffect()` 里的 `componentUpdateFn` 更新分支：
+
+```text
+如果 next 存在
+  -> updateComponentPreRender(instance, next, optimized)
+执行 beforeUpdate
+  -> renderComponentRoot(instance)
+  -> patch(prevTree, nextTree)
+  -> queuePostRenderEffect(updated hooks)
+```
+
+这里才是完整的组件更新：
+
+- 先同步 `props/slots`
+- 再重新执行组件 `render`
+- 最后拿 `prevTree` 和 `nextTree` 做 `patch`
+
+#### 最后把三种情况压成一句话
+
+- `shouldUpdateComponent` 为假：连重新 render 都不会进
+- 异步组件还没 resolve：先只同步 `props/slots`
+- 普通更新路径：同步 `props/slots` 后，继续 `render + patch`
 
 ## 4. 推荐最小 demo
 
@@ -517,7 +769,7 @@ trigger
 第二天的核心不是把所有更新细节都背下来，而是建立一个稳定认知：
 
 - 组件更新是 effect 驱动的
-- effect 默认不直接重跑，而是交给 scheduler
+- effect [伊-费克特] 默认不直接重跑，而是交给 scheduler [斯凯-久-勒]
 - scheduler 通过稳定 job、去重标记、微任务 flush，把多次变化合并成一轮更新
 - watcher 不是额外平行系统，而是以不同 flush 时机插入这轮更新
 
