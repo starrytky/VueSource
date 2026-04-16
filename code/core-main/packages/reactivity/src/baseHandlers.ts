@@ -269,7 +269,9 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       } else if (hasChanged(value, oldValue)) {
         // 已有属性且值真的变化：对应 SET
         // 如果新旧值相同，则不触发，避免无意义更新。
+        debugger;
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+        debugger;
       }
     }
     debugger;

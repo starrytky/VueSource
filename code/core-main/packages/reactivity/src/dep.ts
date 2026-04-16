@@ -57,7 +57,7 @@ export class Link {
       this.nextSub =
       this.prevSub =
       this.prevActiveLink =
-        undefined
+      undefined
   }
 }
 
@@ -195,7 +195,7 @@ export class Dep {
           // if notify() returns `true`, this is a computed. Also call notify
           // on its dep - it's called here instead of inside computed's notify
           // in order to reduce call stack depth.
-          ;(link.sub as ComputedRefImpl).dep.notify()
+          ; (link.sub as ComputedRefImpl).dep.notify()
         }
       }
     } finally {
@@ -299,6 +299,7 @@ export function trigger(
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>,
 ): void {
+  debugger;
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     // never been tracked
@@ -324,7 +325,7 @@ export function trigger(
   }
 
   startBatch()
-
+  debugger;
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target

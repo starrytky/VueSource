@@ -161,6 +161,7 @@ export function flushPreFlushCbs(
   // skip the current job
   i: number = flushIndex + 1,
 ): void {
+  debugger;
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -252,11 +253,13 @@ function flushJobs(seen?: CountMap) {
         if (job.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
           job.flags! &= ~SchedulerJobFlags.QUEUED
         }
+        debugger;
         callWithErrorHandling(
           job,
           job.i,
           job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
         )
+        debugger;
         if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
           job.flags! &= ~SchedulerJobFlags.QUEUED
         }
@@ -273,8 +276,9 @@ function flushJobs(seen?: CountMap) {
 
     flushIndex = -1
     queue.length = 0
-
+    debugger
     flushPostFlushCbs(seen)
+    debugger
 
     currentFlushPromise = null
     // If new jobs have been added to either queue, keep flushing

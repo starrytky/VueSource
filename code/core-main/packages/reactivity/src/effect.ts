@@ -293,6 +293,7 @@ export function endBatch(): void {
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
+          debugger;
           // ACTIVE flag is effect-only
           ; (e as ReactiveEffect).trigger()
         } catch (err) {

@@ -23,28 +23,28 @@
 
   const App = {
     setup() {
-      const count = ref(0)
+      const count = ref({a:0})
 
-      watch(count, () => console.log('parent pre watch', count.value))
+      watch(count.value.a, () => console.log('parent pre watch', count.value.a))
       watch(
-        count,
-        () => console.log('parent post watch', count.value),
+        count.value.a,
+        () => console.log('parent post watch', count.value.a),
         { flush: 'post' }
       )
       watch(
-        count,
-        () => console.log('parent sync watch', count.value),
+        count.value.a,
+        () => console.log('parent sync watch', count.value.a),
         { flush: 'sync' }
       )
 
       window.bump = () => {
-        count.value++
-        count.value++
-        count.value++
+        count.value.a++
+        count.value.a++
+        count.value.a++
       }
 
       window.bumpAndTick = async () => {
-        count.value++
+        count.value.a++
         console.log('after set')
         await nextTick()
         console.log('after nextTick')
@@ -56,13 +56,13 @@
             'button',
             {
               onClick() {
-                count.value++
-                count.value++
+                count.value.a++
+                count.value.a++
               },
             },
-            `count: ${count.value}`
+            `count: ${count.value.a}`
           ),
-          h(Child, { n: count.value }),
+          h(Child, { n: count.value.a }),
         ])
     },
   }
