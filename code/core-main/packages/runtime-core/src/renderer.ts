@@ -1673,7 +1673,9 @@ function baseCreateRenderer(
     pauseTracking()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
+    debugger;
     flushPreFlushCbs(instance)
+    debugger;
     resetTracking()
   }
 
@@ -2460,8 +2462,11 @@ function baseCreateRenderer(
       isFlushing = true
       // 本轮 render 结束后统一刷新调度队列中的前置/后置回调，
       // 避免在渲染过程中发生嵌套 flush。
+      debugger;
       flushPreFlushCbs(instance)
+      debugger;
       flushPostFlushCbs()
+      debugger;
       isFlushing = false
     }
   }
