@@ -188,6 +188,7 @@ export function flushPreFlushCbs(
 }
 
 export function flushPostFlushCbs(seen?: CountMap): void {
+  debugger;
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),
@@ -223,6 +224,7 @@ export function flushPostFlushCbs(seen?: CountMap): void {
     activePostFlushCbs = null
     postFlushIndex = 0
   }
+  debugger;
 }
 
 const getId = (job: SchedulerJob): number =>

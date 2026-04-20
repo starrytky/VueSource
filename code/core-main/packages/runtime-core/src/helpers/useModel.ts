@@ -37,11 +37,12 @@ export function useModel(
   const hyphenatedName = hyphenate(name)
   const modifiers = getModelModifiers(props, camelizedName)
 
+  debugger;
   const res = customRef((track, trigger) => {
     let localValue: any
     let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
-
+    debugger;
     watchSyncEffect(() => {
       const propValue = props[camelizedName]
       if (hasChanged(localValue, propValue)) {
@@ -49,6 +50,7 @@ export function useModel(
         trigger()
       }
     })
+    debugger;
 
     return {
       get() {
@@ -99,6 +101,7 @@ export function useModel(
       },
     }
   })
+  debugger;
 
   // @ts-expect-error
   res[Symbol.iterator] = () => {
@@ -124,6 +127,6 @@ export const getModelModifiers = (
   return modelName === 'modelValue' || modelName === 'model-value'
     ? props.modelModifiers
     : props[`${modelName}Modifiers`] ||
-        props[`${camelize(modelName)}Modifiers`] ||
-        props[`${hyphenate(modelName)}Modifiers`]
+    props[`${camelize(modelName)}Modifiers`] ||
+    props[`${hyphenate(modelName)}Modifiers`]
 }

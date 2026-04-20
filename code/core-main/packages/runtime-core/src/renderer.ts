@@ -1302,7 +1302,9 @@ function baseCreateRenderer(
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        debugger;
         updateComponentPreRender(instance, n2, optimized)
+        debugger;
         if (__DEV__) {
           popWarningContext()
         }
@@ -1311,7 +1313,9 @@ function baseCreateRenderer(
         // normal update
         instance.next = n2
         // instance.update is the reactive effect.
+        debugger;
         instance.update()
+        debugger;
       }
     } else {
       // no update needed. just copy over properties
@@ -1505,7 +1509,9 @@ function baseCreateRenderer(
             // only sync the properties and abort the rest of operations
             if (next) {
               next.el = vnode.el
+              debugger;
               updateComponentPreRender(instance, next, optimized)
+              debugger;
             }
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
@@ -1532,7 +1538,9 @@ function baseCreateRenderer(
         if (next) {
           // 父组件传入了新的 vnode，先把新的 props / slots 同步到实例上。
           next.el = vnode.el
+          debugger;
           updateComponentPreRender(instance, next, optimized)
+          debugger;
         } else {
           // next 为空说明是组件自身状态变更触发的更新。
           next = vnode
@@ -1663,6 +1671,7 @@ function baseCreateRenderer(
     nextVNode: VNode,
     optimized: boolean,
   ) => {
+    debugger;
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
