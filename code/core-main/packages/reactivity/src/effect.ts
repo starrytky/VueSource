@@ -160,11 +160,13 @@ export class ReactiveEffect<T = any>
     this.flags |= EffectFlags.RUNNING
     cleanupEffect(this)
     prepareDeps(this)
+    debugger;
+    // 真正让 当前 effect 生效
     const prevEffect = activeSub
     const prevShouldTrack = shouldTrack
     activeSub = this
     shouldTrack = true
-
+    debugger;
     try {
       return this.fn()
     } finally {

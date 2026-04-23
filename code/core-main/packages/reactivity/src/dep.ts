@@ -260,7 +260,9 @@ export const ARRAY_ITERATE_KEY: unique symbol = Symbol(
  * @param key - Identifier of the reactive property to track.
  */
 export function track(target: object, type: TrackOpTypes, key: unknown): void {
+  debugger;
   if (shouldTrack && activeSub) {
+    debugger;
     let depsMap = targetMap.get(target)
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
@@ -280,7 +282,9 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     } else {
       dep.track()
     }
+    debugger;
   }
+  debugger;
 }
 
 /**
